@@ -186,7 +186,7 @@ app.get('/', wrap(async (req, res) => {
   const sums = await summaries();
   const groups = GENERATIONS.map((g) => ({ label: g, people: people.filter((p) => p.generation === g) })).filter((g) => g.people.length);
   const totals = await trackTotals();
-  res.render('who', { groups, sums, totals, countdown: { totals } });
+  res.render('who', { groups, sums, totals, people, generations: GENERATIONS, countdown: { totals } });
 }));
 
 app.get('/pin/:id', wrap(async (req, res) => {
@@ -203,6 +203,46 @@ app.post('/pin/:id', pinLimiter, wrap(async (req, res) => {
   }
   res.status(401).render('pin', { person, error: 'Wrong PIN. Try again.' });
 }));
+// Sign in from the home page: pick your name from the list and enter your PIN.
+app.post('/signin', pinLimiter, wrap(async (req, res) => {
+  const person = await db.one('SELECT id, name, pin_hash FROM people WHERE id = $1', [parseInt(req.body.person_id, 10) || 0]);
+  if (person && validPin(req.body.pin) && await bcrypt.compare(req.body.pin, person.pin_hash)) {
+    req.session.personId = person.id;
+    delete req.session.adminId;
+    req.flash('ok', `Welcome, ${person.name}! Pick a masechta, or a few blatt or perakim.`);
+    return res.redirect('/learn');
+  }
+  req.flash('err', person ? 'That PIN didn’t match. Try again, or ask the family admin to reset it.' : 'Pick your name from the list first.');
+  res.redirect('/#signin');
+}));
+
+// First time here: add yourself with your own name and PIN.
+const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 15, standardHeaders: true, legacyHeaders: false,
+  message: 'Too many sign-ups from this device. Try again later.' });
+app.post('/register', registerLimiter, wrap(async (req, res) => {
+  const name = cleanName(req.body.name);
+  const gen = GENERATIONS.includes(req.body.generation) ? req.body.generation : null;
+  if (!name || !gen || !validPin(req.body.pin)) {
+    req.flash('err', 'To add yourself, enter your name, pick your generation and choose a 4-digit PIN.');
+    return res.redirect('/#register');
+  }
+  if (req.body.pin !== req.body.pin2) {
+    req.flash('err', 'The two PINs didn’t match. Try again.');
+    return res.redirect('/#register');
+  }
+  const dup = await db.one('SELECT id FROM people WHERE lower(name) = lower($1)', [name]);
+  if (dup) {
+    req.flash('err', `There’s already someone named ${name}. If that’s you, sign in with your PIN. If not, add your last name or initial.`);
+    return res.redirect('/#register');
+  }
+  const p = await db.one('INSERT INTO people (name, generation, pin_hash) VALUES ($1,$2,$3) RETURNING id',
+    [name, gen, await bcrypt.hash(req.body.pin, 10)]);
+  req.session.personId = p.id;
+  delete req.session.adminId;
+  req.flash('ok', `Welcome, ${name}! You’re signed in. Now pick a masechta, or a few blatt or perakim.`);
+  res.redirect('/learn');
+}));
+
 app.post('/switch', (req, res) => { delete req.session.personId; delete req.session.adminId; res.redirect('/'); });
 
 // Admin: pick and mark for someone else, without their PIN.

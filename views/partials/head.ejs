@@ -28,6 +28,8 @@
       <% if (me) { %>
         <a href="/plan">My learning</a>
         <a href="/learn">Pick more</a>
+      <% } else { %>
+        <a href="/#signin">Sign in</a>
       <% } %>
       <a href="/board">Siyum board</a>
       <% if (me && me.is_admin) { %><a href="/admin">Admin</a><% } %>

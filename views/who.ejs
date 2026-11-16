@@ -1,11 +1,72 @@
 <%- include('partials/head', { title: "Who's learning?" }) %>
-<div class="hero">
+<% if (me) { %>
+<section class="card signed-in">
   <div>
-    <h1 class="serif">Who’s learning today?</h1>
-    <p class="muted lead">Tap your name. Take on a whole masechta, or just a few blatt or perakim — together the family finishes Shas.</p>
+    <h1 class="serif">Welcome back, <%= me.name %></h1>
+    <p class="muted lead">Pick something new to learn, or mark what you’ve finished.</p>
   </div>
+  <div class="row">
+    <a class="btn primary" href="/learn">Pick what to learn</a>
+    <a class="btn" href="/plan">My learning</a>
+  </div>
+</section>
+<% } else { %>
+<div>
+  <h1 class="serif">Who’s learning today?</h1>
+  <p class="muted lead">Sign in to pick a whole masechta, or just a few blatt or perakim.</p>
 </div>
+<div class="auth">
+  <section class="card" id="signin" aria-labelledby="signin-h">
+    <h2 id="signin-h" class="title-sm serif">Sign in</h2>
+    <% if (people.length) { %>
+    <form method="post" action="/signin" class="stack">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <label for="person_id">Your name</label>
+      <select id="person_id" name="person_id" required>
+        <option value="">Choose your name…</option>
+        <% groups.forEach(g => { %>
+          <optgroup label="<%= g.label %>">
+            <% g.people.forEach(p => { %><option value="<%= p.id %>"><%= p.name %></option><% }) %>
+          </optgroup>
+        <% }) %>
+      </select>
+      <label for="signin-pin">Your 4-digit PIN</label>
+      <input id="signin-pin" name="pin" type="password" inputmode="numeric" pattern="\d{4}" maxlength="4" autocomplete="off" required class="big pin">
+      <button class="btn primary" type="submit">Sign in &amp; pick</button>
+      <p class="muted small">Forgot your PIN? Ask the family admin to reset it.</p>
+    </form>
+    <% } else { %><p class="muted">Nobody has signed up yet. Add yourself →</p><% } %>
+  </section>
+
+  <section class="card" id="register" aria-labelledby="register-h">
+    <h2 id="register-h" class="title-sm serif">First time here? Add yourself</h2>
+    <form method="post" action="/register" class="stack">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <label for="reg-name">Your name</label>
+      <input id="reg-name" name="name" required maxlength="60" autocomplete="name" placeholder="e.g. Moishy Kramer">
+      <label for="reg-gen">You are one of the…</label>
+      <select id="reg-gen" name="generation" required>
+        <option value="">Choose…</option>
+        <% generations.forEach(g => { %><option><%= g %></option><% }) %>
+      </select>
+      <div class="two">
+        <div class="stack"><label for="reg-pin">New 4-digit PIN</label>
+          <input id="reg-pin" name="pin" type="password" inputmode="numeric" pattern="\d{4}" maxlength="4" autocomplete="new-password" required class="big pin"></div>
+        <div class="stack"><label for="reg-pin2">Same PIN again</label>
+          <input id="reg-pin2" name="pin2" type="password" inputmode="numeric" pattern="\d{4}" maxlength="4" autocomplete="new-password" required class="big pin"></div>
+      </div>
+      <button class="btn primary" type="submit">Add me &amp; start picking</button>
+      <p class="muted small">Remember your PIN. You’ll use it with your name next time.</p>
+    </form>
+  </section>
+</div>
+<% } %>
+
 <% const tints = { 'Zaidy & Bubby': 't1', 'Children': 't2', 'Grandchildren': 't3', 'Great-grandchildren': 't4' }; %>
+<% if (groups.length) { %>
+<h2 class="serif title-sm" style="margin-top: 8px">The family so far</h2>
+<% if (!me) { %><p class="muted small" style="margin-top: -14px">You can also tap your name below.</p><% } %>
+<% } %>
 <% groups.forEach(g => { %>
 <section class="gen">
   <h2><%= g.label %></h2>
