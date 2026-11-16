@@ -1,0 +1,64 @@
+<%- include('partials/head', { title: 'Admin' }) %>
+<h1 class="serif">Family admin</h1>
+
+<section class="card">
+  <h2 class="title-sm">Add a family member</h2>
+  <form method="post" action="/admin/people" class="form-row">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <label>Name<input name="name" required maxlength="60"></label>
+    <label>Generation<select name="generation"><% generations.forEach(g => { %><option<%= g === 'Grandchildren' ? ' selected' : '' %>><%= g %></option><% }) %></select></label>
+    <label>4-digit PIN<input name="pin" inputmode="numeric" pattern="\d{4}" maxlength="4" required></label>
+    <label class="check"><input type="checkbox" name="is_admin" value="1"> Admin</label>
+    <button class="btn primary" type="submit">Add</button>
+  </form>
+</section>
+
+<section class="card">
+  <h2 class="title-sm">Everyone (<%= people.length %>)</h2>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Name &amp; generation</th><th>Taken</th><th>Reset PIN</th><th>Admin</th><th></th></tr></thead>
+    <tbody>
+    <% people.forEach(p => { %>
+      <tr>
+        <td>
+          <form method="post" action="/admin/people/<%= p.id %>/edit" class="form-row tight">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <input name="name" value="<%= p.name %>" aria-label="Name" maxlength="60" required>
+            <select name="generation" aria-label="Generation"><% generations.forEach(g => { %><option<%= g === p.generation ? ' selected' : '' %>><%= g %></option><% }) %></select>
+            <button class="btn small-btn" type="submit">Save</button>
+          </form>
+        </td>
+        <td><%= p.units %></td>
+        <td>
+          <form method="post" action="/admin/people/<%= p.id %>/pin" class="form-row tight">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <input name="pin" inputmode="numeric" pattern="\d{4}" maxlength="4" required aria-label="New PIN for <%= p.name %>" placeholder="New PIN" class="pin-input">
+            <button class="btn small-btn" type="submit">Set</button>
+          </form>
+        </td>
+        <td>
+          <form method="post" action="/admin/people/<%= p.id %>/admin" class="inline">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <button class="btn small-btn" type="submit" <%= p.id === me.id ? 'disabled' : '' %>><%= p.is_admin ? 'Admin ✓' : 'Make admin' %></button>
+          </form>
+        </td>
+        <td>
+          <% if (p.id !== me.id) { %>
+          <details>
+            <summary class="danger-link">Remove</summary>
+            <form method="post" action="/admin/people/<%= p.id %>/delete" class="inline">
+              <input type="hidden" name="_csrf" value="<%= csrf %>">
+              <p class="small muted">This frees up everything <%= p.name %> took.</p>
+              <button class="btn small-btn danger" type="submit">Yes, remove <%= p.name %></button>
+            </form>
+          </details>
+          <% } %>
+        </td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table>
+  </div>
+</section>
+<%- include('partials/foot') %>

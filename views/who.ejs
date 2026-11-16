@@ -1,0 +1,30 @@
+<%- include('partials/head', { title: "Who's learning?" }) %>
+<div class="hero">
+  <div>
+    <h1 class="serif">Who’s learning today?</h1>
+    <p class="muted lead">Tap your name. Take on a whole masechta, or just a few blatt or perakim — together the family finishes Shas.</p>
+  </div>
+  <div class="card progress-card">
+    <span class="muted small">Family progress</span>
+    <% [['g','Gemara','blatt'],['m','Mishnayos','perakim']].forEach(([k, n, w]) => { const v = totals[k]; %>
+      <span class="strong"><%= n %> · <%= v.taken.toLocaleString() %> of <%= v.total.toLocaleString() %> <%= w %> taken</span>
+      <div class="bar"><div style="width: <%= Math.round(100 * v.taken / v.total) %>%"></div></div>
+    <% }) %>
+  </div>
+</div>
+<% const tints = { 'Zaidy & Bubby': 't1', 'Children': 't2', 'Grandchildren': 't3', 'Great-grandchildren': 't4' }; %>
+<% groups.forEach(g => { %>
+<section class="gen">
+  <h2><%= g.label %></h2>
+  <div class="people">
+    <% g.people.forEach(p => { const s = sums[p.id] || []; %>
+      <a class="person" href="/pin/<%= p.id %>">
+        <span class="avatar <%= tints[g.label] %>"><%= p.name.charAt(0) %></span>
+        <span class="strong"><%= p.name %></span>
+        <span class="muted small"><%= s.length ? s[0].what + (s.length > 1 ? ' +' + (s.length - 1) + ' more' : '') : 'Nothing picked yet' %></span>
+      </a>
+    <% }) %>
+  </div>
+</section>
+<% }) %>
+<%- include('partials/foot') %>

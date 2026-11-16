@@ -1,0 +1,19 @@
+# Render Blueprint: one free web service. It shares CheckBridge's Postgres database
+# but keeps all of its tables in its own schema (kramer_shas), so nothing overlaps.
+services:
+  - type: web
+    name: kramer-family-shas
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false          # paste CheckBridge database's Internal Database URL
+      - key: FAMILY_CODE
+        sync: false          # the code family members type once per device, e.g. KRAMER-5786
+      - key: SESSION_SECRET
+        generateValue: true

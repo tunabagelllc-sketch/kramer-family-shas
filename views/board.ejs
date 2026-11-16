@@ -1,0 +1,47 @@
+<%- include('partials/head', { title: 'Siyum board' }) %>
+<h1 class="serif">Family siyum board</h1>
+<div class="boards">
+<% boards.forEach(b => { %>
+<section class="card">
+  <h2 class="serif title-sm"><%= b.t.key === 'g' ? 'Siyum HaShas · Gemara' : 'Siyum on Shisha Sidrei Mishnah' %></h2>
+  <div class="stats">
+    <div><span class="muted small"><%= b.t.many[0].toUpperCase() + b.t.many.slice(1) %></span><span class="num"><%= b.total.toLocaleString() %></span></div>
+    <div><span class="muted small">Taken</span><span class="num"><%= b.taken.toLocaleString() %></span></div>
+    <div><span class="muted small">Learned</span><span class="num"><%= b.learned.toLocaleString() %></span></div>
+  </div>
+  <div class="seder-rows">
+    <% b.sedarim.forEach(sd => { %>
+      <div class="seder-row">
+        <span class="strong"><%= sd.name %> <span lang="he" class="serif muted"><%= sd.heb %></span></span>
+        <div class="bar stacked" role="img" aria-label="<%= sd.learned %> learned, <%= sd.taken %> taken of <%= sd.total %>">
+          <div class="learned" style="width: <%= (100 * sd.learned / sd.total).toFixed(1) %>%"></div>
+          <div class="taken" style="width: <%= (100 * (sd.taken - sd.learned) / sd.total).toFixed(1) %>%"></div>
+        </div>
+        <span class="muted small right"><%= sd.total %> <%= b.t.many %></span>
+      </div>
+    <% }) %>
+  </div>
+  <div class="legend"><span><i class="sw learned"></i>Learned</span><span><i class="sw takenbar"></i>Taken, not learned yet</span><span><i class="sw open"></i>Still open</span></div>
+</section>
+<% }) %>
+</div>
+
+<section class="card">
+  <h2 class="title-sm">Who’s learning what</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Who</th><th>Took</th><th>Learned</th></tr></thead>
+      <tbody>
+      <% let any = false; people.forEach(p => { (sums[p.id] || []).forEach((s, i) => { any = true; %>
+        <tr>
+          <td><% if (i === 0) { %><strong><%= p.name %></strong><br><span class="muted small"><%= p.generation %></span><% } %></td>
+          <td><%= s.what %></td>
+          <td><%= s.done %> of <%= s.of %><%= s.done === s.of ? ' ✓' : '' %></td>
+        </tr>
+      <% }) }) %>
+      <% if (!any) { %><tr><td colspan="3" class="muted">Nobody has picked anything yet.</td></tr><% } %>
+      </tbody>
+    </table>
+  </div>
+</section>
+<%- include('partials/foot') %>

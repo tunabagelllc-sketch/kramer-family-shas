@@ -1,0 +1,17 @@
+<%- include('partials/head', { title: 'Set up', hideNav: true }) %>
+<section class="card narrow">
+  <h1 class="serif">Set up the family site</h1>
+  <p class="muted">You’re the first one here, so you’ll be the family admin. You can add everyone else next.</p>
+  <form method="post" action="/setup" class="stack">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <label for="name">Your name</label>
+    <input id="name" name="name" required maxlength="60">
+    <label for="generation">Generation</label>
+    <select id="generation" name="generation"><% generations.forEach(g => { %><option><%= g %></option><% }) %></select>
+    <label for="pin">Pick a 4-digit PIN</label>
+    <input id="pin" name="pin" inputmode="numeric" pattern="\d{4}" maxlength="4" required class="big">
+    <% if (error) { %><p class="error" role="alert"><%= error %></p><% } %>
+    <button class="btn primary" type="submit">Create my profile</button>
+  </form>
+</section>
+<%- include('partials/foot') %>

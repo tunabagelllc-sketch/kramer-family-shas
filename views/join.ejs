@@ -1,0 +1,13 @@
+<%- include('partials/head', { title: 'Welcome', hideNav: true }) %>
+<section class="card narrow center">
+  <h1 class="serif">Welcome</h1>
+  <p class="muted">Enter the family code to get in. You only need to do this once on each phone or computer.</p>
+  <form method="post" action="/join" class="stack">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <label for="code">Family code</label>
+    <input id="code" name="code" autocomplete="off" autocapitalize="characters" required class="big">
+    <% if (error) { %><p class="error" role="alert"><%= error %></p><% } %>
+    <button class="btn primary" type="submit">Come in</button>
+  </form>
+</section>
+<%- include('partials/foot') %>
