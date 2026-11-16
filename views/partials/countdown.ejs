@@ -1,0 +1,19 @@
+<% const daysLeft = Math.max(1, siyum.days);
+   const pace = Object.values(totals).map(v => ({ ...v, perDay: (v.total - v.learned) / daysLeft })); %>
+<section class="countdown" aria-labelledby="cd-title">
+  <div class="cd-head">
+    <span class="eyebrow gold">Family siyum</span>
+    <h2 id="cd-title" class="serif cd-title">Finishing everything by Chanukah</h2>
+    <span class="small cd-sub"><%= siyum.label %></span>
+  </div>
+  <div class="cd-clock" data-target="<%= siyum.iso %>" role="timer" aria-live="off">
+    <div><span class="cd-num" data-unit="d"><%= siyum.days %></span><span class="cd-lbl">days</span></div>
+    <div><span class="cd-num" data-unit="h">–</span><span class="cd-lbl">hours</span></div>
+    <div><span class="cd-num" data-unit="m">–</span><span class="cd-lbl">minutes</span></div>
+    <div><span class="cd-num" data-unit="s">–</span><span class="cd-lbl">seconds</span></div>
+  </div>
+  <p class="small cd-pace">To finish on time, the family needs to learn about
+    <strong><%= Math.ceil(pace[0].perDay) %> blatt a day</strong> and <strong><%= Math.ceil(pace[1].perDay * 7) %> perakim a week</strong>
+    <span class="cd-faint">(<%= (pace[0].total - pace[0].learned).toLocaleString() %> blatt and <%= (pace[1].total - pace[1].learned).toLocaleString() %> perakim still to learn)</span>.</p>
+</section>
+<script src="/countdown.js" defer></script>

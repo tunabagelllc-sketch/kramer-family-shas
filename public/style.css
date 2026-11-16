@@ -156,3 +156,17 @@ td { padding: 12px 6px; border-top: 1px solid #EFE8DB; vertical-align: top; }
   .modes { grid-template-columns: 1fr 1fr; }
   .card { padding: 18px; }
 }
+
+/* Siyum countdown */
+.countdown { background: var(--leather); color: var(--bg); border-radius: 16px; padding: 24px; display: flex; flex-wrap: wrap; gap: 18px 32px; align-items: center; justify-content: space-between; }
+.cd-head { display: flex; flex-direction: column; gap: 4px; }
+.cd-title { margin: 0; font-size: 28px; color: #fff; }
+.cd-sub { color: #E6DCCB; }
+.cd-clock { display: grid; grid-template-columns: repeat(4, minmax(64px, 1fr)); gap: 10px; }
+.cd-clock > div { background: #5A3D37; border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; align-items: center; }
+.cd-num { font-family: 'Frank Ruhl Libre', Georgia, serif; font-size: 34px; font-weight: 700; color: var(--gold); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.cd-lbl { font-size: 12px; color: #E6DCCB; text-transform: uppercase; letter-spacing: 0.06em; }
+.cd-pace { flex-basis: 100%; margin: 0; color: #F7F4EE; }
+.cd-pace strong { color: var(--gold); }
+.cd-faint { color: #D8CCBA; }
+@media (max-width: 560px) { .cd-num { font-size: 26px; } .cd-clock { grid-template-columns: repeat(4, minmax(0, 1fr)); width: 100%; } }

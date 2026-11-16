@@ -13,6 +13,9 @@ const FAMILY_NAME = process.env.FAMILY_NAME || 'Kramer';
 const FAMILY_CODE = process.env.FAMILY_CODE || '';
 const PORT = process.env.PORT || 3000;
 const PROD = process.env.NODE_ENV === 'production';
+// Family siyum target: first candle of Chanukah 5788, Friday Dec 24, 2027 (about sundown, New York time).
+const SIYUM_DATE = new Date(process.env.SIYUM_DATE || '2027-12-24T16:30:00-05:00');
+const SIYUM_LABEL = process.env.SIYUM_LABEL || 'Chanukah 5788 · Friday evening, December 24, 2027';
 
 if (PROD && (!FAMILY_CODE || !process.env.SESSION_SECRET)) {
   console.error('FAMILY_CODE and SESSION_SECRET must be set.');
@@ -59,6 +62,8 @@ app.use((req, res, next) => {
   res.locals.me = null;
   res.locals.flash = req.session.flash || null;
   res.locals.hebNum = hebNum;
+  const msLeft = Math.max(0, SIYUM_DATE - Date.now());
+  res.locals.siyum = { iso: SIYUM_DATE.toISOString(), label: SIYUM_LABEL, days: Math.ceil(msLeft / 86400000) };
   delete req.session.flash;
   req.flash = (type, msg) => { req.session.flash = { type, msg }; };
   next();
