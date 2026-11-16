@@ -11,8 +11,8 @@ and the family tracks its way to a siyum.
 
 ## Running on Render (free)
 - Free web service, using the Blueprint in `render.yaml`.
-- It shares an existing Postgres database (`DATABASE_URL`) but keeps all its tables in its
-  own schema, `kramer_shas`, so it never touches the other app's tables.
+- Database: a free Neon Postgres project (`DATABASE_URL`, direct connection string). Tables live in
+  the `kramer_shas` schema.
 - Env vars: `DATABASE_URL`, `FAMILY_CODE`, `SESSION_SECRET` (auto-generated), optional `FAMILY_NAME`.
 
 ## Local

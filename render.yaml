@@ -1,5 +1,5 @@
-# Render Blueprint: one free web service. It shares CheckBridge's Postgres database
-# but keeps all of its tables in its own schema (kramer_shas), so nothing overlaps.
+# Render Blueprint: one free web service. The database is a free Neon Postgres project;
+# all tables live in the kramer_shas schema.
 services:
   - type: web
     name: kramer-family-shas
@@ -12,7 +12,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        sync: false          # paste CheckBridge database's Internal Database URL
+        sync: false          # Neon connection string (direct, not pooled)
       - key: FAMILY_CODE
         sync: false          # the code family members type once per device, e.g. KRAMER-5786
       - key: SESSION_SECRET

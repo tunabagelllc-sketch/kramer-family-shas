@@ -1,7 +1,7 @@
 const { Pool } = require('pg');
 
 const connectionString = process.env.DATABASE_URL || 'postgres://postgres@localhost:5432/kramer';
-const needsSsl = /render\.com|amazonaws|neon\.tech|supabase/.test(connectionString) || process.env.PGSSL === '1';
+const needsSsl = /render\.com|amazonaws|neon\.tech|neon\.com|supabase/.test(connectionString) || process.env.PGSSL === '1';
 
 // Everything this site stores lives in its own schema, so it can share a database
 // with another app without touching that app's tables.
@@ -11,8 +11,9 @@ const pool = new Pool({
   connectionString,
   ssl: needsSsl ? { rejectUnauthorized: false } : undefined,
   max: 5,
-  options: `-c search_path=${SCHEMA}`,
 });
+// Point every new connection at this site's own schema.
+pool.on('connect', (client) => { client.query(`SET search_path TO ${SCHEMA}`).catch(() => {}); });
 pool.on('error', (e) => console.error('Database connection dropped:', e.message));
 
 const many = async (text, params) => (await pool.query(text, params)).rows;
