@@ -2,7 +2,7 @@
 <section class="card narrow center">
   <h1 class="serif">Welcome</h1>
   <p class="muted">Enter the family code to get in. You only need to do this once on each phone or computer.</p>
-  <form method="post" action="/join" class="stack">
+  <form method="post" action="/" class="stack">
     <input type="hidden" name="_csrf" value="<%= csrf %>">
     <label for="code">Family code</label>
     <input id="code" name="code" autocomplete="off" autocapitalize="characters" required class="big">

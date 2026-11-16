@@ -85,7 +85,7 @@ const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).cat
 
 function requireFamily(req, res, next) {
   if (req.session.family) return next();
-  res.redirect('/join');
+  res.redirect('/');
 }
 
 const loadMe = wrap(async (req, res, next) => {
@@ -129,17 +129,19 @@ const validPin = (p) => /^\d{4}$/.test(String(p || ''));
 const cleanName = (n) => String(n || '').replace(/\s+/g, ' ').trim().slice(0, 60);
 
 // ---------- Family code ----------
-app.get('/join', (req, res) => {
-  if (req.session.family) return res.redirect('/');
-  res.render('join', { error: null });
-});
-app.post('/join', codeLimiter, (req, res) => {
+// The home page itself asks for the family code when this device isn't signed in yet.
+function joinHandler(req, res) {
   if (FAMILY_CODE && sameCode(req.body.code || '', FAMILY_CODE)) {
     req.session.family = true;
     return res.redirect('/');
   }
   res.status(401).render('join', { error: 'That code didn’t match. Ask the family admin for the code.' });
-});
+}
+app.get('/', (req, res, next) => (req.session.family ? next() : res.render('join', { error: null })));
+app.post('/', codeLimiter, joinHandler);
+// Old /join links still work
+app.get('/join', (req, res) => res.redirect('/'));
+app.post('/join', codeLimiter, joinHandler);
 
 app.use(requireFamily, loadMe);
 
