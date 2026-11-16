@@ -34,6 +34,7 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", 'https://fonts.googleapis.com'],
+      styleSrcAttr: ["'unsafe-inline'"],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:'],
       scriptSrc: ["'self'"],
@@ -183,7 +184,7 @@ app.get('/', wrap(async (req, res) => {
   const sums = await summaries();
   const groups = GENERATIONS.map((g) => ({ label: g, people: people.filter((p) => p.generation === g) })).filter((g) => g.people.length);
   const totals = await trackTotals();
-  res.render('who', { groups, sums, totals });
+  res.render('who', { groups, sums, totals, countdown: { totals } });
 }));
 
 app.get('/pin/:id', wrap(async (req, res) => {
@@ -339,7 +340,9 @@ app.get('/board', wrap(async (req, res) => {
   });
   const people = await db.many('SELECT id, name, generation FROM people ORDER BY created_at, id');
   const sums = await summaries();
-  res.render('board', { boards, people, sums });
+  const cdTotals = {};
+  for (const b of boards) cdTotals[b.t.key] = { total: b.total, taken: b.taken, learned: b.learned };
+  res.render('board', { boards, people, sums, countdown: { totals: cdTotals } });
 }));
 
 // ---------- Admin ----------

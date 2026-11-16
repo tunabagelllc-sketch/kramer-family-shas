@@ -1,19 +1,35 @@
 <% const daysLeft = Math.max(1, siyum.days);
-   const pace = Object.values(totals).map(v => ({ ...v, perDay: (v.total - v.learned) / daysLeft })); %>
-<section class="countdown" aria-labelledby="cd-title">
-  <div class="cd-head">
-    <span class="eyebrow gold">Family siyum</span>
-    <h2 id="cd-title" class="serif cd-title">Finishing everything by Chanukah</h2>
-    <span class="small cd-sub"><%= siyum.label %></span>
+   const g = totals.g, m = totals.m;
+   const pct = (v) => { const x = 100 * v.learned / v.total; return v.learned > 0 && x < 1 ? '<1' : String(Math.round(x)); };
+   const ringW = (v) => Math.min(100, 100 * v.learned / v.total).toFixed(2); %>
+<section class="cd-hero" aria-labelledby="cd-title">
+  <div class="wrap">
+    <div class="cd-card">
+      <div class="cd-left">
+        <span class="eyebrow">Family siyum · Chanukah 5788</span>
+        <h2 id="cd-title" class="serif cd-title">Countdown to the siyum</h2>
+        <div class="cd-clock" data-target="<%= siyum.iso %>" role="timer" aria-live="off">
+          <div><span class="cd-num" data-unit="d"><%= siyum.days %></span><span class="cd-lbl">days</span></div>
+          <div><span class="cd-num" data-unit="h">–</span><span class="cd-lbl">hours</span></div>
+          <div><span class="cd-num" data-unit="m">–</span><span class="cd-lbl">min</span></div>
+          <div><span class="cd-num" data-unit="s">–</span><span class="cd-lbl">sec</span></div>
+        </div>
+        <p class="cd-pace small"><%= siyum.label.replace(/^Chanukah 5788 · /, '') %> · needs about
+          <strong><%= Math.ceil((g.total - g.learned) / daysLeft) %> blatt a day</strong> and
+          <strong><%= Math.ceil((m.total - m.learned) / daysLeft * 7) %> perakim a week</strong></p>
+      </div>
+      <div class="cd-rings">
+        <% [['Gemara', g, 'blatt'], ['Mishnayos', m, 'perakim']].forEach(([name, v, unit]) => { %>
+        <div class="cd-ring-wrap">
+          <div class="cd-ring" style="--p: <%= ringW(v) %>%" role="img" aria-label="<%= name %>: <%= v.learned %> of <%= v.total %> <%= unit %> learned">
+            <div class="cd-ring-in"><span class="cd-ring-pct"><%= pct(v) %>%</span><span class="cd-ring-lbl">learned</span></div>
+          </div>
+          <span class="strong"><%= name %></span>
+          <span class="muted small cd-ring-sub"><%= v.learned.toLocaleString() %> of <%= v.total.toLocaleString() %> <%= unit %></span>
+        </div>
+        <% }) %>
+      </div>
+    </div>
   </div>
-  <div class="cd-clock" data-target="<%= siyum.iso %>" role="timer" aria-live="off">
-    <div><span class="cd-num" data-unit="d"><%= siyum.days %></span><span class="cd-lbl">days</span></div>
-    <div><span class="cd-num" data-unit="h">–</span><span class="cd-lbl">hours</span></div>
-    <div><span class="cd-num" data-unit="m">–</span><span class="cd-lbl">minutes</span></div>
-    <div><span class="cd-num" data-unit="s">–</span><span class="cd-lbl">seconds</span></div>
-  </div>
-  <p class="small cd-pace">To finish on time, the family needs to learn about
-    <strong><%= Math.ceil(pace[0].perDay) %> blatt a day</strong> and <strong><%= Math.ceil(pace[1].perDay * 7) %> perakim a week</strong>
-    <span class="cd-faint">(<%= (pace[0].total - pace[0].learned).toLocaleString() %> blatt and <%= (pace[1].total - pace[1].learned).toLocaleString() %> perakim still to learn)</span>.</p>
 </section>
 <script src="/countdown.js?v=<%= v %>" defer></script>

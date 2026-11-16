@@ -1,6 +1,5 @@
 <%- include('partials/head', { title: 'Siyum board' }) %>
 <h1 class="serif">Family siyum board</h1>
-<%- include('partials/countdown', { totals: { g: { total: boards[0].total, learned: boards[0].learned }, m: { total: boards[1].total, learned: boards[1].learned } } }) %>
 <div class="boards">
 <% boards.forEach(b => { %>
 <section class="card">
