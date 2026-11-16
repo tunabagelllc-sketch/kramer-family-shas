@@ -12,6 +12,8 @@ const { TRACKS, GENERATIONS, hebNum, ranges, sefariaUrl } = require('./data');
 const FAMILY_NAME = process.env.FAMILY_NAME || 'Kramer';
 const FAMILY_CODE = process.env.FAMILY_CODE || '';
 const PORT = process.env.PORT || 3000;
+// Changes on every deploy so browsers fetch the new CSS/JS instead of a cached copy.
+const ASSET_V = (process.env.RENDER_GIT_COMMIT || String(Date.now())).slice(0, 8);
 const PROD = process.env.NODE_ENV === 'production';
 // Family siyum target: first candle of Chanukah 5788, Friday Dec 24, 2027 (about sundown, New York time).
 const SIYUM_DATE = new Date(process.env.SIYUM_DATE || '2027-12-24T16:30:00-05:00');
@@ -59,6 +61,7 @@ app.use((req, res, next) => {
   if (!req.session.csrf) req.session.csrf = crypto.randomBytes(18).toString('hex');
   res.locals.csrf = req.session.csrf;
   res.locals.familyName = FAMILY_NAME;
+  res.locals.v = ASSET_V;
   res.locals.me = null;
   res.locals.flash = req.session.flash || null;
   res.locals.hebNum = hebNum;
