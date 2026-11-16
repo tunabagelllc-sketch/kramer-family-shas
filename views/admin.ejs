@@ -1,5 +1,6 @@
 <%- include('partials/head', { title: 'Admin' }) %>
 <h1 class="serif">Family admin</h1>
+<p class="muted">Use <strong>Pick for</strong> to choose blatt or perakim, or mark them learned, for someone else, like a young child or a grandparent. You won’t need their PIN.</p>
 
 <section class="card">
   <h2 class="title-sm">Add a family member</h2>
@@ -17,7 +18,7 @@
   <h2 class="title-sm">Everyone (<%= people.length %>)</h2>
   <div class="table-wrap">
   <table>
-    <thead><tr><th>Name &amp; generation</th><th>Taken</th><th>Reset PIN</th><th>Admin</th><th></th></tr></thead>
+    <thead><tr><th>Name &amp; generation</th><th>Taken</th><th>Pick for them</th><th>Reset PIN</th><th>Admin</th><th></th></tr></thead>
     <tbody>
     <% people.forEach(p => { %>
       <tr>
@@ -30,6 +31,14 @@
           </form>
         </td>
         <td><%= p.units %></td>
+        <td>
+          <% if (p.id !== me.id) { %>
+          <form method="post" action="/admin/people/<%= p.id %>/act" class="inline">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <button class="btn small-btn primary" type="submit">Pick for <%= p.name %></button>
+          </form>
+          <% } %>
+        </td>
         <td>
           <form method="post" action="/admin/people/<%= p.id %>/pin" class="form-row tight">
             <input type="hidden" name="_csrf" value="<%= csrf %>">

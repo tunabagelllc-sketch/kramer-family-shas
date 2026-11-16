@@ -35,5 +35,16 @@
     <% } %>
   </div>
 </header>
+<% if (typeof actingAdmin !== 'undefined' && actingAdmin && me) { %>
+<div class="acting" role="status">
+  <div class="wrap acting-row">
+    <span>Admin mode: you’re picking for <strong><%= me.name %></strong>. Anything you take or mark goes on <%= me.name %>’s plan.</span>
+    <form method="post" action="/admin/return" class="inline">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <button type="submit" class="btn small-btn">Back to <%= actingAdmin.name %></button>
+    </form>
+  </div>
+</div>
+<% } %>
 <main class="wrap page">
 <% if (flash) { %><div class="flash <%= flash.type %>" role="status"><%= flash.msg %></div><% } %>

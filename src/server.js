@@ -85,9 +85,17 @@ function requireFamily(req, res, next) {
 }
 
 const loadMe = wrap(async (req, res, next) => {
+  res.locals.actingAdmin = null;
+  // An admin "acting as" someone else: personId is that person, adminId is the admin.
+  if (req.session.adminId) {
+    const admin = await db.one('SELECT id, name, is_admin FROM people WHERE id = $1', [req.session.adminId]);
+    if (!admin || !admin.is_admin) { delete req.session.adminId; delete req.session.personId; }
+    else if (req.session.personId === admin.id) delete req.session.adminId;
+    else { res.locals.actingAdmin = admin; req.actingAdmin = admin; }
+  }
   if (req.session.personId) {
     const me = await db.one('SELECT id, name, generation, is_admin FROM people WHERE id = $1', [req.session.personId]);
-    if (!me) delete req.session.personId;
+    if (!me) { delete req.session.personId; if (req.actingAdmin) { req.session.personId = req.actingAdmin.id; delete req.session.adminId; return res.redirect('/admin'); } }
     res.locals.me = me;
     req.me = me;
   }
@@ -189,7 +197,22 @@ app.post('/pin/:id', pinLimiter, wrap(async (req, res) => {
   }
   res.status(401).render('pin', { person, error: 'Wrong PIN. Try again.' });
 }));
-app.post('/switch', (req, res) => { delete req.session.personId; res.redirect('/'); });
+app.post('/switch', (req, res) => { delete req.session.personId; delete req.session.adminId; res.redirect('/'); });
+
+// Admin: pick and mark for someone else, without their PIN.
+app.post('/admin/people/:id/act', requirePerson, requireAdmin, wrap(async (req, res) => {
+  const p = await db.one('SELECT id, name FROM people WHERE id = $1', [req.params.id]);
+  if (!p) return res.redirect('/admin');
+  if (p.id === req.me.id) return res.redirect('/plan');
+  req.session.adminId = req.me.id;
+  req.session.personId = p.id;
+  req.flash('ok', `You're now picking for ${p.name}. Everything you take or mark goes on ${p.name}'s plan.`);
+  res.redirect('/learn');
+}));
+app.post('/admin/return', (req, res) => {
+  if (req.session.adminId) { req.session.personId = req.session.adminId; delete req.session.adminId; }
+  res.redirect('/admin');
+});
 
 // ---------- Learn: pick a whole masechta or some units ----------
 app.get('/learn', requirePerson, wrap(async (req, res) => {
