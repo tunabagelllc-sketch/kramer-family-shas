@@ -10,6 +10,7 @@ const db = require('./db');
 const { TRACKS, GENERATIONS, hebNum, ranges, sefariaUrl } = require('./data');
 
 const FAMILY_NAME = process.env.FAMILY_NAME || 'Kramer';
+const SELF_GENERATIONS = GENERATIONS.filter((g) => g !== 'Zaidy & Bubby');
 const FAMILY_CODE = process.env.FAMILY_CODE || '';
 const PORT = process.env.PORT || 3000;
 // Changes on every deploy so browsers fetch the new CSS/JS instead of a cached copy.
@@ -186,7 +187,7 @@ app.get('/', wrap(async (req, res) => {
   const sums = await summaries();
   const groups = GENERATIONS.map((g) => ({ label: g, people: people.filter((p) => p.generation === g) })).filter((g) => g.people.length);
   const totals = await trackTotals();
-  res.render('who', { groups, sums, totals, people, generations: GENERATIONS, countdown: { totals } });
+  res.render('who', { groups, sums, totals, people, generations: SELF_GENERATIONS, countdown: { totals } });
 }));
 
 app.get('/pin/:id', wrap(async (req, res) => {
@@ -225,7 +226,8 @@ const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 15, standar
   message: 'Too many sign-ups from this device. Try again later.' });
 app.post('/register', registerLimiter, wrap(async (req, res) => {
   const name = cleanName(req.body.name);
-  const gen = GENERATIONS.includes(req.body.generation) ? req.body.generation : null;
+  // Zaidy & Bubby are added by an admin, not through self sign-up.
+  const gen = SELF_GENERATIONS.includes(req.body.generation) ? req.body.generation : null;
   if (!name || !gen || !validPin(req.body.pin)) {
     req.flash('err', 'To add yourself, enter your name, pick your generation and choose a 4-digit PIN.');
     return res.redirect('/#register');
