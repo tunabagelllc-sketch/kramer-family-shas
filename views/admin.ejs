@@ -4,11 +4,12 @@
 
 <section class="card">
   <h2 class="title-sm">Add a family member</h2>
+  <p class="muted small" style="margin: -6px 0 0">The PIN is optional. Without one, they can’t sign in themselves, but you can still pick for them. Set a PIN later in the list below.</p>
   <form method="post" action="/admin/people" class="form-row">
     <input type="hidden" name="_csrf" value="<%= csrf %>">
     <label>Name<input name="name" required maxlength="60"></label>
     <label>Generation<select name="generation"><% generations.forEach(g => { %><option<%= g === 'Grandchildren' ? ' selected' : '' %>><%= g %></option><% }) %></select></label>
-    <label>4-digit PIN<input name="pin" inputmode="numeric" pattern="\d{4}" maxlength="4" required></label>
+    <label>4-digit PIN <span class="muted small">(optional)</span><input name="pin" inputmode="numeric" pattern="\d{4}" maxlength="4" placeholder="Leave empty"></label>
     <label class="check"><input type="checkbox" name="is_admin" value="1"> Admin</label>
     <button class="btn primary" type="submit">Add</button>
   </form>
@@ -18,7 +19,7 @@
   <h2 class="title-sm">Everyone (<%= people.length %>)</h2>
   <div class="table-wrap">
   <table>
-    <thead><tr><th>Name &amp; generation</th><th>Taken</th><th>Pick for them</th><th>Reset PIN</th><th>Admin</th><th></th></tr></thead>
+    <thead><tr><th>Name &amp; generation</th><th>Taken</th><th>Pick for them</th><th>PIN</th><th>Admin</th><th></th></tr></thead>
     <tbody>
     <% people.forEach(p => { %>
       <tr>
@@ -42,8 +43,9 @@
         <td>
           <form method="post" action="/admin/people/<%= p.id %>/pin" class="form-row tight">
             <input type="hidden" name="_csrf" value="<%= csrf %>">
-            <input name="pin" inputmode="numeric" pattern="\d{4}" maxlength="4" required aria-label="New PIN for <%= p.name %>" placeholder="New PIN" class="pin-input">
+            <input name="pin" inputmode="numeric" pattern="\d{4}" maxlength="4" required aria-label="New PIN for <%= p.name %>" placeholder="<%= p.has_pin ? 'New PIN' : 'Set PIN' %>" class="pin-input">
             <button class="btn small-btn" type="submit">Set</button>
+            <% if (!p.has_pin) { %><span class="nopin">No PIN yet</span><% } %>
           </form>
         </td>
         <td>

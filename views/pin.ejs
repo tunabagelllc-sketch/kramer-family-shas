@@ -2,6 +2,10 @@
 <section class="card narrow center">
   <span class="avatar t2 big-avatar"><%= person.name.charAt(0) %></span>
   <h1 class="serif">Hi, <%= person.name %></h1>
+  <% if (!person.has_pin) { %>
+  <p class="lead"><%= person.name %> doesn’t have a PIN yet.</p>
+  <p class="muted">Ask the family admin to set one. Until then, the admin can pick for <%= person.name %>.</p>
+  <% } else { %>
   <form method="post" action="/pin/<%= person.id %>" class="stack">
     <input type="hidden" name="_csrf" value="<%= csrf %>">
     <label for="pin">Your 4-digit PIN</label>
@@ -9,6 +13,7 @@
     <% if (error) { %><p class="error" role="alert"><%= error %></p><% } %>
     <button class="btn primary" type="submit">Go</button>
   </form>
+  <% } %>
   <p class="small"><a href="/">Not you? Pick another name</a></p>
   <p class="muted small">Forgot your PIN? Ask the family admin to reset it.</p>
 </section>

@@ -43,6 +43,8 @@ async function migrate() {
       PRIMARY KEY (track, masechta, unit)
     );
     CREATE INDEX IF NOT EXISTS claims_person ON claims(person_id);
+    -- Admins can add someone without a PIN; they can't sign in until an admin sets one.
+    ALTER TABLE people ALTER COLUMN pin_hash DROP NOT NULL;
     CREATE TABLE IF NOT EXISTS session (
       sid    VARCHAR NOT NULL PRIMARY KEY,
       sess   JSON NOT NULL,

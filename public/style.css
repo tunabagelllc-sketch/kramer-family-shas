@@ -193,3 +193,4 @@ td { padding: 12px 6px; border-top: 1px solid #EFE8DB; vertical-align: top; }
 .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .signed-in { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
 .signed-in h1 { margin: 0 0 4px; font-size: 32px; }
+.nopin { font-size: 12px; font-weight: 600; background: #F3ECDF; color: #5C4A2E; border-radius: 999px; padding: 3px 9px; white-space: nowrap; }

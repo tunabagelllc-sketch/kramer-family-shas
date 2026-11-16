@@ -190,14 +190,14 @@ app.get('/', wrap(async (req, res) => {
 }));
 
 app.get('/pin/:id', wrap(async (req, res) => {
-  const person = await db.one('SELECT id, name FROM people WHERE id = $1', [req.params.id]);
+  const person = await db.one('SELECT id, name, (pin_hash IS NOT NULL) AS has_pin FROM people WHERE id = $1', [req.params.id]);
   if (!person) return res.redirect('/');
   res.render('pin', { person, error: null });
 }));
 app.post('/pin/:id', pinLimiter, wrap(async (req, res) => {
-  const person = await db.one('SELECT id, name, pin_hash FROM people WHERE id = $1', [req.params.id]);
+  const person = await db.one('SELECT id, name, pin_hash, (pin_hash IS NOT NULL) AS has_pin FROM people WHERE id = $1', [req.params.id]);
   if (!person) return res.redirect('/');
-  if (validPin(req.body.pin) && await bcrypt.compare(req.body.pin, person.pin_hash)) {
+  if (person.pin_hash && validPin(req.body.pin) && await bcrypt.compare(req.body.pin, person.pin_hash)) {
     req.session.personId = person.id;
     return res.redirect('/plan');
   }
@@ -206,6 +206,10 @@ app.post('/pin/:id', pinLimiter, wrap(async (req, res) => {
 // Sign in from the home page: pick your name from the list and enter your PIN.
 app.post('/signin', pinLimiter, wrap(async (req, res) => {
   const person = await db.one('SELECT id, name, pin_hash FROM people WHERE id = $1', [parseInt(req.body.person_id, 10) || 0]);
+  if (person && !person.pin_hash) {
+    req.flash('err', `${person.name} doesn’t have a PIN yet. Ask the family admin to set one.`);
+    return res.redirect('/#signin');
+  }
   if (person && validPin(req.body.pin) && await bcrypt.compare(req.body.pin, person.pin_hash)) {
     req.session.personId = person.id;
     delete req.session.adminId;
@@ -232,7 +236,7 @@ app.post('/register', registerLimiter, wrap(async (req, res) => {
   }
   const dup = await db.one('SELECT id FROM people WHERE lower(name) = lower($1)', [name]);
   if (dup) {
-    req.flash('err', `There’s already someone named ${name}. If that’s you, sign in with your PIN. If not, add your last name or initial.`);
+    req.flash('err', `There’s already someone named ${name}. If that’s you, sign in with your PIN (or ask the family admin for one). If not, add your last name or initial.`);
     return res.redirect('/#register');
   }
   const p = await db.one('INSERT INTO people (name, generation, pin_hash) VALUES ($1,$2,$3) RETURNING id',
@@ -389,17 +393,20 @@ app.get('/board', wrap(async (req, res) => {
 
 // ---------- Admin ----------
 app.get('/admin', requirePerson, requireAdmin, wrap(async (req, res) => {
-  const people = await db.many(`SELECT p.id, p.name, p.generation, p.is_admin, count(c.unit)::int AS units
+  const people = await db.many(`SELECT p.id, p.name, p.generation, p.is_admin, (p.pin_hash IS NOT NULL) AS has_pin, count(c.unit)::int AS units
     FROM people p LEFT JOIN claims c ON c.person_id = p.id GROUP BY p.id ORDER BY p.created_at, p.id`);
   res.render('admin', { people, generations: GENERATIONS });
 }));
 app.post('/admin/people', requirePerson, requireAdmin, wrap(async (req, res) => {
   const name = cleanName(req.body.name);
   const gen = GENERATIONS.includes(req.body.generation) ? req.body.generation : GENERATIONS[1];
-  if (!name || !validPin(req.body.pin)) { req.flash('err', 'Enter a name and a 4-digit PIN.'); return res.redirect('/admin'); }
+  const pin = String(req.body.pin || '').trim();
+  if (!name) { req.flash('err', 'Enter a name.'); return res.redirect('/admin'); }
+  if (pin && !validPin(pin)) { req.flash('err', 'A PIN must be 4 digits, or leave it empty to add them without one.'); return res.redirect('/admin'); }
   await db.pool.query('INSERT INTO people (name, generation, pin_hash, is_admin) VALUES ($1,$2,$3,$4)',
-    [name, gen, await bcrypt.hash(req.body.pin, 10), req.body.is_admin === '1']);
-  req.flash('ok', `Added ${name}. Their PIN is ${req.body.pin} — tell them privately.`);
+    [name, gen, pin ? await bcrypt.hash(pin, 10) : null, req.body.is_admin === '1']);
+  req.flash('ok', pin ? `Added ${name}. Their PIN is ${pin} — tell them privately.`
+    : `Added ${name} without a PIN. You can pick for them now; set a PIN whenever they want to sign in themselves.`);
   res.redirect('/admin');
 }));
 app.post('/admin/people/:id/pin', requirePerson, requireAdmin, wrap(async (req, res) => {
