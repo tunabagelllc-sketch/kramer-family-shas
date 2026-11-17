@@ -43,6 +43,15 @@ async function migrate() {
       PRIMARY KEY (track, masechta, unit)
     );
     CREATE INDEX IF NOT EXISTS claims_person ON claims(person_id);
+    -- Tehillim is said in rounds: once all 150 kapitlach are taken, the next round opens.
+    ALTER TABLE claims ADD COLUMN IF NOT EXISTS round INT NOT NULL DEFAULT 1;
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid
+                     WHERE c.relname = 'claims_pkey_r' AND c.relnamespace = 'kramer_shas'::regnamespace) THEN
+        ALTER TABLE claims DROP CONSTRAINT IF EXISTS claims_pkey;
+        ALTER TABLE claims ADD CONSTRAINT claims_pkey_r PRIMARY KEY (track, masechta, unit, round);
+      END IF;
+    END $$;
     -- Admins can add someone without a PIN; they can't sign in until an admin sets one.
     ALTER TABLE people ALTER COLUMN pin_hash DROP NOT NULL;
     CREATE TABLE IF NOT EXISTS session (

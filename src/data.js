@@ -75,9 +75,23 @@ const MISHNAH = [
     m('yadayim', 'Yadayim', 'ידים', 4, 'Mishnah_Yadayim'), m('uktzin', 'Uktzin', 'עוקצין', 3, 'Mishnah_Oktzin') ] },
 ];
 
+// Tehillim: 150 kapitlach in five sefarim. Each sefer is picked like a masechta.
+function sefer(n, heb, first, last) {
+  return { key: 'sefer-' + n, name: 'Sefer ' + n, heb, first, last, sefaria: 'Psalms' };
+}
+const TEHILLIM = [
+  { name: 'Tehillim', heb: 'תהלים', masechtos: [
+    sefer(1, 'ספר ראשון', 1, 41), sefer(2, 'ספר שני', 42, 72), sefer(3, 'ספר שלישי', 73, 89),
+    sefer(4, 'ספר רביעי', 90, 106), sefer(5, 'ספר חמישי', 107, 150) ] },
+];
+
 const TRACKS = {
-  g: { key: 'g', name: 'Gemara', heb: 'תלמוד בבלי', sedarim: GEMARA, first: 2, one: 'daf', many: 'blatt', unitWord: 'Daf' },
-  m: { key: 'm', name: 'Mishnayos', heb: 'ששה סדרי משנה', sedarim: MISHNAH, first: 1, one: 'perek', many: 'perakim', unitWord: 'Perek' },
+  g: { key: 'g', name: 'Gemara', heb: 'תלמוד בבלי', sedarim: GEMARA, first: 2, one: 'daf', many: 'blatt', unitWord: 'Daf',
+    prefix: '', rangePrefix: '', tapWord: 'dafim', wholeWord: 'masechta', doneWord: 'learned', rounds: false },
+  m: { key: 'm', name: 'Mishnayos', heb: 'ששה סדרי משנה', sedarim: MISHNAH, first: 1, one: 'perek', many: 'perakim', unitWord: 'Perek',
+    prefix: 'Mishnayos ', rangePrefix: 'perek ', tapWord: 'perakim', wholeWord: 'masechta', doneWord: 'learned', rounds: false },
+  t: { key: 't', name: 'Tehillim', heb: 'תהלים', sedarim: TEHILLIM, first: 1, one: 'kapitel', many: 'kapitlach', unitWord: 'Kapitel',
+    prefix: 'Tehillim ', rangePrefix: 'kapitel ', tapWord: 'kapitlach', wholeWord: 'sefer', doneWord: 'said', rounds: true },
 };
 
 for (const t of Object.values(TRACKS)) {
@@ -87,7 +101,8 @@ for (const t of Object.values(TRACKS)) {
     s.total = 0;
     s.masechtos.forEach((x) => {
       x.seder = si;
-      x.count = x.last - t.first + 1;
+      if (x.first == null) x.first = t.first;
+      x.count = x.last - x.first + 1;
       s.total += x.count;
       t.byKey[x.key] = x;
     });
@@ -119,6 +134,7 @@ function ranges(units) {
 
 // Link to the text on Sefaria. Gemara links to amud aleph of the daf.
 function sefariaUrl(trackKey, x, unit) {
+  if (trackKey === 't') return `https://www.sefaria.org/Psalms.${unit}`;
   if (trackKey === 'm') return `https://www.sefaria.org/${x.sefaria}.${unit}`;
   if (x.key === 'meilah') {
     if (unit <= 22) return `https://www.sefaria.org/Meilah.${unit}a`;

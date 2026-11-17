@@ -194,3 +194,22 @@ td { padding: 12px 6px; border-top: 1px solid #EFE8DB; vertical-align: top; }
 .signed-in { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; }
 .signed-in h1 { margin: 0 0 4px; font-size: 32px; }
 .nopin { font-size: 12px; font-weight: 600; background: #F3ECDF; color: #5C4A2E; border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+
+/* Tehillim */
+.modes { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); max-width: 900px; }
+.round-note { margin-top: 6px; background: #F3ECDF; border-radius: 12px; padding: 14px 16px; font-size: 14px; color: #5C4A2E; line-height: 1.45; }
+.cd-rings { gap: 22px; }
+.cd-ring { width: 136px; height: 136px; }
+.cd-ring-in { width: 104px; height: 104px; }
+.cd-ring-pct { font-size: 30px; }
+.boards { grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); }
+@media (max-width: 560px) { .cd-ring { width: 104px; height: 104px; } .cd-ring-in { width: 80px; height: 80px; } .cd-ring-pct { font-size: 22px; } .cd-rings { gap: 14px; } }
+.mas .heb { white-space: nowrap; font-size: 18px; }
+@media (max-width: 560px) {
+  .cd-rings { gap: 10px; flex-wrap: nowrap; width: 100%; justify-content: space-between; }
+  .cd-ring { width: 92px; height: 92px; }
+  .cd-ring-in { width: 70px; height: 70px; }
+  .cd-ring-pct { font-size: 19px; }
+  .cd-ring-wrap .strong { font-size: 14px; }
+  .cd-ring-sub { font-size: 11px; text-align: center; }
+}

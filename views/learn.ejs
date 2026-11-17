@@ -1,6 +1,6 @@
 <%- include('partials/head', { title: 'Pick what to learn' }) %>
 <h1 class="serif">What would you like to learn?</h1>
-<p class="muted lead">Choose Gemara or Mishnayos, then a masechta. Take the whole thing, or tap just the parts you want.</p>
+<p class="muted lead">Choose Gemara, Mishnayos or Tehillim. Take a whole section, or tap just the parts you want.</p>
 
 <div class="modes" role="group" aria-label="What to learn">
   <% Object.values(tracks).forEach(tr => { const on = tr.key === t.key; %>
@@ -12,11 +12,13 @@
   <% }) %>
 </div>
 
+<% if (t.sedarim.length > 1) { %>
 <nav class="tabs" aria-label="Sedarim">
   <% t.sedarim.forEach((sd, i) => { %>
     <a class="tab<%= i === s ? ' on' : '' %>" href="/learn?track=<%= t.key %>&s=<%= i %>" <%= i === s ? 'aria-current=page' : '' %>><%= sd.name %> <span lang="he" class="serif"><%= sd.heb %></span></a>
   <% }) %>
 </nav>
+<% } %>
 
 <div class="split">
   <div class="list">
@@ -24,18 +26,21 @@
       <a class="mas<%= on ? ' on' : '' %>" href="/learn?track=<%= t.key %>&s=<%= s %>&m=<%= mx.key %>#detail" <%= on ? 'aria-current=page' : '' %>>
         <span class="mas-text">
           <span class="strong"><%= mx.name %></span>
-          <span class="muted small"><%= mx.count %> <%= t.many %> · <%= tk === 0 ? 'all open' : tk >= mx.count ? 'fully taken' : (mx.count - tk) + ' open' %></span>
+          <span class="muted small"><%= t.rounds ? 'Kapitel ' + mx.first + '–' + mx.last + ' · ' : '' %><%= mx.count %> <%= t.many %> · <%= tk === 0 ? 'all open' : tk >= mx.count ? 'fully taken' : (mx.count - tk) + ' open' %></span>
         </span>
         <span class="heb serif" lang="he" dir="rtl"><%= mx.heb %></span>
       </a>
     <% }) %>
+    <% if (t.rounds) { %>
+      <div class="round-note"><strong>Round <%= round %> of Tehillim.</strong> When all 150 kapitlach are taken, Round <%= round + 1 %> opens so the family can keep saying Tehillim together.<%= finished ? ` The family has finished Tehillim ${finished} time${finished === 1 ? '' : 's'} so far.` : '' %></div>
+    <% } %>
   </div>
 
   <section class="card detail" id="detail">
     <div class="detail-head">
       <div>
-        <h2 class="serif title"><%= t.key === 'm' ? 'Mishnayos ' : '' %><%= x.name %></h2>
-        <span class="muted"><%= x.count %> <%= t.many %> · <%= free %> still open</span>
+        <h2 class="serif title"><%= labelOf(t, x) %></h2>
+        <span class="muted"><%= t.rounds ? 'Kapitel ' + x.first + '–' + x.last + ' · ' : '' %><%= x.count %> <%= t.many %> · <%= free %> still open<%= t.rounds ? ' · Round ' + round : '' %></span>
       </div>
       <span class="heb serif bigheb" lang="he" dir="rtl"><%= x.heb %></span>
     </div>
@@ -47,14 +52,14 @@
       <div class="options">
         <div class="option primary-opt">
           <span class="eyebrow">Option 1</span>
-          <span class="strong lg">The whole masechta</span>
-          <span class="muted small"><%= free === x.count ? `All ${x.count} ${t.many} are open. Take it all and make your own siyum.` : free === 0 ? 'Everything here is already taken.' : `Some ${t.many} are taken. You can take the ${free} that are left.` %></span>
+          <span class="strong lg">The whole <%= t.wholeWord %></span>
+          <span class="muted small"><%= free === x.count ? `All ${x.count} ${t.many} are open. ${t.rounds ? 'Say the whole sefer.' : 'Take it all and make your own siyum.'}` : free === 0 ? 'Everything here is already taken.' : `Some ${t.many} are taken. You can take the ${free} that are left.` %></span>
           <button class="btn primary" type="submit" name="mode" value="whole" <%= free === 0 ? 'disabled' : '' %>><%= free === x.count ? `Take all ${x.count} ${t.many}` : free === 0 ? 'Fully taken' : `Take the remaining ${free}` %></button>
         </div>
         <div class="option">
           <span class="eyebrow muted">Option 2</span>
           <span class="strong lg">Just a few <%= t.many %></span>
-          <span class="muted small">Tap the <%= t.key === 'g' ? 'dafim' : 'perakim' %> below, then press this button. Grey ones are already taken.</span>
+          <span class="muted small">Tap the <%= t.tapWord %> below, then press this button. Grey ones are already taken.</span>
           <button class="btn" type="submit" name="mode" value="picked" <%= free === 0 ? 'disabled' : '' %>>Add the ones I tapped</button>
         </div>
       </div>

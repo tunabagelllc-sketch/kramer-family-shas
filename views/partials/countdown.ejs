@@ -1,5 +1,5 @@
 <% const daysLeft = Math.max(1, siyum.days);
-   const g = totals.g, m = totals.m;
+   const g = totals.g, m = totals.m, th = totals.t;
    const pct = (v) => { const x = 100 * v.learned / v.total; return v.learned > 0 && x < 1 ? '<1' : String(Math.round(x)); };
    const ringW = (v) => Math.min(100, 100 * v.learned / v.total).toFixed(2); %>
 <section class="cd-hero" aria-labelledby="cd-title">
@@ -19,13 +19,13 @@
           <strong><%= Math.ceil((m.total - m.learned) / daysLeft * 7) %> perakim a week</strong></p>
       </div>
       <div class="cd-rings">
-        <% [['Gemara', g, 'blatt'], ['Mishnayos', m, 'perakim']].forEach(([name, v, unit]) => { %>
+        <% [['Gemara', g, 'blatt', 'learned'], ['Mishnayos', m, 'perakim', 'learned'], ['Tehillim', th, 'kapitlach', 'said']].filter(r => r[1]).forEach(([name, v, unit, word]) => { %>
         <div class="cd-ring-wrap">
-          <div class="cd-ring" style="--p: <%= ringW(v) %>%" role="img" aria-label="<%= name %>: <%= v.learned %> of <%= v.total %> <%= unit %> learned">
-            <div class="cd-ring-in"><span class="cd-ring-pct"><%= pct(v) %>%</span><span class="cd-ring-lbl">learned</span></div>
+          <div class="cd-ring" style="--p: <%= ringW(v) %>%" role="img" aria-label="<%= name %>: <%= v.learned %> of <%= v.total %> <%= unit %> <%= word %>">
+            <div class="cd-ring-in"><span class="cd-ring-pct"><%= pct(v) %>%</span><span class="cd-ring-lbl"><%= word %></span></div>
           </div>
           <span class="strong"><%= name %></span>
-          <span class="muted small cd-ring-sub"><%= v.learned.toLocaleString() %> of <%= v.total.toLocaleString() %> <%= unit %></span>
+          <span class="muted small cd-ring-sub"><%= v.learned.toLocaleString() %> of <%= v.total.toLocaleString() %><%= v.round ? ' · Round ' + v.round : ' ' + unit %></span>
         </div>
         <% }) %>
       </div>

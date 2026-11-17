@@ -5,14 +5,14 @@
 <section class="next card dark">
   <span class="eyebrow gold">Up next</span>
   <span class="serif next-title"><%= next.g.label %> <%= next.g.t.one %> <span lang="he"><%= next.u.label %></span> (<%= next.u.n %>)</span>
-  <span class="small"><%= next.g.whole ? 'Whole masechta' : next.g.range %> · <%= next.g.done %> of <%= next.g.units.length %> <%= next.g.t.many %> learned</span>
+  <span class="small"><%= next.g.whole ? 'Whole ' + next.g.t.wholeWord : next.g.range %> · <%= next.g.done %> of <%= next.g.units.length %> <%= next.g.t.many %> <%= next.g.t.doneWord %></span>
   <div class="bar dark-bar"><div style="width: <%= Math.round(100 * next.g.done / next.g.units.length) %>%"></div></div>
   <div class="row">
     <form method="post" action="/learned" class="inline">
       <input type="hidden" name="_csrf" value="<%= csrf %>">
-      <input type="hidden" name="track" value="<%= next.g.t.key %>"><input type="hidden" name="masechta" value="<%= next.g.x.key %>">
+      <input type="hidden" name="track" value="<%= next.g.t.key %>"><input type="hidden" name="masechta" value="<%= next.g.x.key %>"><input type="hidden" name="round" value="<%= next.g.round %>">
       <input type="hidden" name="unit" value="<%= next.u.n %>"><input type="hidden" name="learned" value="1">
-      <button class="btn gold-btn" type="submit">Mark as learned</button>
+      <button class="btn gold-btn" type="submit">Mark as <%= next.g.t.doneWord %></button>
     </form>
     <% if (next.u.url) { %><a class="btn ghost-dark" href="<%= next.u.url %>" target="_blank" rel="noopener">Open on Sefaria</a><% } %>
   </div>
@@ -26,12 +26,12 @@
   </section>
 <% } %>
 
-<% groups.forEach(g => { const anchor = g.t.key + '-' + g.x.key; %>
+<% groups.forEach(g => { const anchor = g.t.key + '-' + g.x.key + '-' + g.round; %>
 <section class="card group" id="<%= anchor %>">
   <div class="detail-head">
     <div>
       <h2 class="serif title-sm"><%= g.label %></h2>
-      <span class="muted small"><%= g.whole ? 'Whole masechta' : (g.t.key === 'm' ? 'Perek ' : '') + g.range %> · <%= g.done %> of <%= g.units.length %> learned<%= g.done === g.units.length ? ' · Siyum!' : '' %></span>
+      <span class="muted small"><%= g.whole ? 'Whole ' + g.t.wholeWord : g.t.rangePrefix.charAt(0).toUpperCase() + g.t.rangePrefix.slice(1) + g.range %> · <%= g.done %> of <%= g.units.length %> <%= g.t.doneWord %><%= g.done === g.units.length ? (g.t.rounds ? ' · Done!' : ' · Siyum!') : '' %></span>
     </div>
     <span class="heb serif" lang="he" dir="rtl"><%= g.x.heb %></span>
   </div>
@@ -40,20 +40,20 @@
     <% g.units.forEach(u => { %>
       <form method="post" action="/learned" class="inline">
         <input type="hidden" name="_csrf" value="<%= csrf %>">
-        <input type="hidden" name="track" value="<%= g.t.key %>"><input type="hidden" name="masechta" value="<%= g.x.key %>">
+        <input type="hidden" name="track" value="<%= g.t.key %>"><input type="hidden" name="masechta" value="<%= g.x.key %>"><input type="hidden" name="round" value="<%= g.round %>">
         <input type="hidden" name="unit" value="<%= u.n %>"><input type="hidden" name="learned" value="<%= u.learned ? '0' : '1' %>">
         <input type="hidden" name="anchor" value="<%= anchor %>">
-        <button type="submit" class="unit-btn<%= u.learned ? ' done' : '' %>" aria-pressed="<%= u.learned %>" title="<%= g.t.unitWord %> <%= u.n %>: <%= u.learned ? 'learned (tap to undo)' : 'tap when learned' %>"><%= u.label %><span class="sr"> (<%= g.t.unitWord %> <%= u.n %><%= u.learned ? ', learned' : '' %>)</span></button>
+        <button type="submit" class="unit-btn<%= u.learned ? ' done' : '' %>" aria-pressed="<%= u.learned %>" title="<%= g.t.unitWord %> <%= u.n %>: <%= u.learned ? g.t.doneWord + ' (tap to undo)' : 'tap when ' + g.t.doneWord %>"><%= u.label %><span class="sr"> (<%= g.t.unitWord %> <%= u.n %><%= u.learned ? ', learned' : '' %>)</span></button>
       </form>
     <% }) %>
   </div>
   <details class="small">
     <summary>Give some back</summary>
-    <p class="muted">Changed your mind? Give back the ones you haven’t learned so someone else can take them.</p>
+    <p class="muted">Changed your mind? Give back the ones you haven’t finished so someone else can take them.</p>
     <form method="post" action="/release" class="inline">
       <input type="hidden" name="_csrf" value="<%= csrf %>">
-      <input type="hidden" name="track" value="<%= g.t.key %>"><input type="hidden" name="masechta" value="<%= g.x.key %>">
-      <button class="btn small-btn" type="submit">Give back all unlearned <%= g.t.many %></button>
+      <input type="hidden" name="track" value="<%= g.t.key %>"><input type="hidden" name="masechta" value="<%= g.x.key %>"><input type="hidden" name="round" value="<%= g.round %>">
+      <button class="btn small-btn" type="submit">Give back all unfinished <%= g.t.many %></button>
     </form>
   </details>
 </section>

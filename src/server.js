@@ -168,14 +168,29 @@ app.post('/setup', wrap(async (req, res) => {
 }));
 
 // ---------- Who's learning ----------
+const labelOf = (t, x) => t.prefix + x.name;
+
+// Tehillim is said in rounds. The current round is the newest one, unless all 150 are taken in it.
+async function tehillimRound() {
+  const r = await db.one(`SELECT round, count(*)::int AS n FROM claims WHERE track = 't' GROUP BY round ORDER BY round DESC LIMIT 1`);
+  if (!r) return 1;
+  return r.n >= TRACKS.t.total ? r.round + 1 : r.round;
+}
+const roundFor = async (t) => (t.rounds ? tehillimRound() : 1);
+async function tehillimFinished() {
+  const r = await db.one(`SELECT count(*)::int AS n FROM (SELECT round FROM claims WHERE track = 't' GROUP BY round
+    HAVING count(learned_at) >= $1) x`, [TRACKS.t.total]);
+  return r ? r.n : 0;
+}
+
 async function summaries() {
-  const rows = await db.many(`SELECT person_id, track, masechta, array_agg(unit ORDER BY unit) AS units,
-      count(learned_at)::int AS learned FROM claims GROUP BY person_id, track, masechta ORDER BY min(claimed_at)`);
+  const rows = await db.many(`SELECT person_id, track, masechta, round, array_agg(unit ORDER BY unit) AS units,
+      count(learned_at)::int AS learned FROM claims GROUP BY person_id, track, masechta, round ORDER BY min(claimed_at)`);
   const by = {};
   for (const r of rows) {
-    const t = TRACKS[r.track]; const x = t.byKey[r.masechta]; if (!x) continue;
-    const label = (r.track === 'm' ? 'Mishnayos ' : '') + x.name;
-    const what = r.units.length === x.count ? `${label} · whole` : `${label} ${r.track === 'm' ? 'perek ' : ''}${ranges(r.units)}`;
+    const t = TRACKS[r.track]; const x = t && t.byKey[r.masechta]; if (!x) continue;
+    const rnd = t.rounds && r.round > 1 ? ` · Round ${r.round}` : '';
+    const what = r.units.length === x.count ? `${labelOf(t, x)} · whole${rnd}` : `${t.prefix}${t.rangePrefix}${ranges(r.units)}${rnd}`;
     (by[r.person_id] = by[r.person_id] || []).push({ what, done: r.learned, of: r.units.length, unitsWord: t.many });
   }
   return by;
@@ -272,62 +287,68 @@ app.get('/learn', requirePerson, wrap(async (req, res) => {
   let s = parseInt(req.query.s, 10); if (!(s >= 0 && s < t.sedarim.length)) s = t.key === 'g' ? 1 : 0;
   const seder = t.sedarim[s];
   const x = (req.query.m && t.byKey[req.query.m] && t.byKey[req.query.m].seder === s) ? t.byKey[req.query.m] : seder.masechtos[0];
+  const round = await roundFor(t);
 
-  const counts = await db.many('SELECT masechta, count(*)::int AS n FROM claims WHERE track = $1 GROUP BY masechta', [t.key]);
+  const counts = await db.many('SELECT masechta, count(*)::int AS n FROM claims WHERE track = $1 AND round = $2 GROUP BY masechta', [t.key, round]);
   const takenCount = Object.fromEntries(counts.map((c) => [c.masechta, c.n]));
   const claimed = await db.many(`SELECT c.unit, c.person_id, p.name FROM claims c JOIN people p ON p.id = c.person_id
-    WHERE c.track = $1 AND c.masechta = $2`, [t.key, x.key]);
+    WHERE c.track = $1 AND c.masechta = $2 AND c.round = $3`, [t.key, x.key, round]);
   const owner = Object.fromEntries(claimed.map((c) => [c.unit, c]));
   const units = [];
-  for (let u = t.first; u <= x.last; u++) units.push({ n: u, label: hebNum(u), owner: owner[u] || null });
+  for (let u = x.first; u <= x.last; u++) units.push({ n: u, label: hebNum(u), owner: owner[u] || null });
   const free = units.filter((u) => !u.owner).length;
-  res.render('learn', { t, tracks: TRACKS, s, seder, x, units, free, takenCount });
+  const finished = t.rounds ? await tehillimFinished() : 0;
+  res.render('learn', { t, tracks: TRACKS, s, seder, x, units, free, takenCount, round, finished, labelOf });
 }));
 
 app.post('/claim', requirePerson, wrap(async (req, res) => {
   const t = TRACKS[req.body.track]; const x = t && t.byKey[req.body.masechta];
   if (!x) return res.redirect('/learn');
+  const round = await roundFor(t);
   let wanted = [];
   if (req.body.mode === 'whole') {
-    const taken = new Set((await db.many('SELECT unit FROM claims WHERE track = $1 AND masechta = $2', [t.key, x.key])).map((r) => r.unit));
-    for (let u = t.first; u <= x.last; u++) if (!taken.has(u)) wanted.push(u);
+    const taken = new Set((await db.many('SELECT unit FROM claims WHERE track = $1 AND masechta = $2 AND round = $3',
+      [t.key, x.key, round])).map((r) => r.unit));
+    for (let u = x.first; u <= x.last; u++) if (!taken.has(u)) wanted.push(u);
   } else {
     const raw = [].concat(req.body.units || []);
-    wanted = [...new Set(raw.map((v) => parseInt(v, 10)).filter((u) => u >= t.first && u <= x.last))];
+    wanted = [...new Set(raw.map((v) => parseInt(v, 10)).filter((u) => u >= x.first && u <= x.last))];
   }
   const back = `/learn?track=${t.key}&s=${x.seder}&m=${x.key}`;
   if (!wanted.length) {
     req.flash('err', req.body.mode === 'whole' ? 'Everything here is already taken.' : `Tap at least one ${t.one} first.`);
     return res.redirect(back);
   }
-  const r = await db.pool.query(`INSERT INTO claims (track, masechta, unit, person_id)
-    SELECT $1, $2, u, $3 FROM unnest($4::int[]) AS u ON CONFLICT DO NOTHING`, [t.key, x.key, req.me.id, wanted]);
-  const label = (t.key === 'm' ? 'Mishnayos ' : '') + x.name;
+  const r = await db.pool.query(`INSERT INTO claims (track, masechta, unit, person_id, round)
+    SELECT $1, $2, u, $3, $5 FROM unnest($4::int[]) AS u ON CONFLICT DO NOTHING`, [t.key, x.key, req.me.id, wanted, round]);
+  const label = labelOf(t, x);
   const got = r.rowCount;
   if (got === 0) req.flash('err', 'Someone else already took those. Pick others.');
   else if (got < wanted.length) req.flash('ok', `Added ${got} ${got === 1 ? t.one : t.many} of ${label}. ${wanted.length - got} were just taken by someone else.`);
   else if (req.body.mode === 'whole') req.flash('ok', got === x.count ? `You took all of ${label}. Hatzlacha!` : `You took the remaining ${got} ${got === 1 ? t.one : t.many} of ${label}. Hatzlacha!`);
   else req.flash('ok', `Added ${got} ${got === 1 ? t.one : t.many} of ${label} to your plan.`);
+  if (t.rounds && (await roundFor(t)) > round) req.flash('ok', `That finished taking all of Tehillim! Round ${round + 1} is now open.`);
   res.redirect(back);
 }));
 
 // ---------- My plan ----------
+const TRACK_ORDER = { g: 0, m: 1, t: 2 };
 app.get('/plan', requirePerson, wrap(async (req, res) => {
-  const rows = await db.many(`SELECT track, masechta, unit, learned_at FROM claims WHERE person_id = $1 ORDER BY track, masechta, unit`, [req.me.id]);
+  const rows = await db.many(`SELECT track, masechta, unit, round, learned_at FROM claims WHERE person_id = $1 ORDER BY track, masechta, round, unit`, [req.me.id]);
   const groups = [];
   const idx = {};
   for (const r of rows) {
-    const t = TRACKS[r.track]; const x = t.byKey[r.masechta]; if (!x) continue;
-    const k = r.track + ':' + r.masechta;
+    const t = TRACKS[r.track]; const x = t && t.byKey[r.masechta]; if (!x) continue;
+    const k = r.track + ':' + r.masechta + ':' + r.round;
     if (!idx[k]) {
-      idx[k] = { t, x, label: (r.track === 'm' ? 'Mishnayos ' : '') + x.name, units: [] };
+      idx[k] = { t, x, round: r.round, label: labelOf(t, x) + (t.rounds && r.round > 1 ? ` · Round ${r.round}` : ''), units: [] };
       groups.push(idx[k]);
     }
     idx[k].units.push({ n: r.unit, label: hebNum(r.unit), learned: !!r.learned_at, url: sefariaUrl(r.track, x, r.unit) });
   }
-  // Gemara first, then by order in Shas
-  groups.sort((a, b) => (a.t.key === b.t.key ? 0 : a.t.key === 'g' ? -1 : 1) || a.x.seder - b.x.seder
-    || a.t.sedarim[a.x.seder].masechtos.indexOf(a.x) - b.t.sedarim[b.x.seder].masechtos.indexOf(b.x));
+  // Gemara, then Mishnayos, then Tehillim; each in its own order
+  groups.sort((a, b) => (TRACK_ORDER[a.t.key] - TRACK_ORDER[b.t.key]) || a.x.seder - b.x.seder
+    || a.t.sedarim[a.x.seder].masechtos.indexOf(a.x) - b.t.sedarim[b.x.seder].masechtos.indexOf(b.x) || a.round - b.round);
   for (const g of groups) {
     g.done = g.units.filter((u) => u.learned).length;
     g.whole = g.units.length === g.x.count;
@@ -342,8 +363,8 @@ app.post('/learned', requirePerson, wrap(async (req, res) => {
   const t = TRACKS[req.body.track];
   if (t) {
     await db.pool.query(`UPDATE claims SET learned_at = ${req.body.learned === '1' ? 'now()' : 'NULL'}
-      WHERE track = $1 AND masechta = $2 AND unit = $3 AND person_id = $4`,
-    [t.key, req.body.masechta, parseInt(req.body.unit, 10), req.me.id]);
+      WHERE track = $1 AND masechta = $2 AND unit = $3 AND person_id = $4 AND round = $5`,
+    [t.key, req.body.masechta, parseInt(req.body.unit, 10), req.me.id, parseInt(req.body.round, 10) || 1]);
   }
   res.redirect('/plan' + (req.body.anchor ? '#' + encodeURIComponent(req.body.anchor) : ''));
 }));
@@ -351,36 +372,47 @@ app.post('/learned', requirePerson, wrap(async (req, res) => {
 app.post('/release', requirePerson, wrap(async (req, res) => {
   const t = TRACKS[req.body.track];
   if (t) {
-    const params = [t.key, req.body.masechta, req.me.id];
-    let sql = 'DELETE FROM claims WHERE track = $1 AND masechta = $2 AND person_id = $3 AND learned_at IS NULL';
-    if (req.body.unit) { sql += ' AND unit = $4'; params.push(parseInt(req.body.unit, 10)); }
+    const params = [t.key, req.body.masechta, req.me.id, parseInt(req.body.round, 10) || 1];
+    let sql = 'DELETE FROM claims WHERE track = $1 AND masechta = $2 AND person_id = $3 AND round = $4 AND learned_at IS NULL';
+    if (req.body.unit) { sql += ' AND unit = $5'; params.push(parseInt(req.body.unit, 10)); }
     const r = await db.pool.query(sql, params);
-    req.flash('ok', r.rowCount ? `Gave back ${r.rowCount} so someone else can take ${r.rowCount === 1 ? 'it' : 'them'}. (Anything you already learned stays yours.)` : 'Nothing to give back. Learned ones stay yours.');
+    req.flash('ok', r.rowCount ? `Gave back ${r.rowCount} so someone else can take ${r.rowCount === 1 ? 'it' : 'them'}. (Anything you already finished stays yours.)` : 'Nothing to give back. Finished ones stay yours.');
   }
   res.redirect('/plan');
 }));
 
 // ---------- Family siyum board ----------
+// Gemara and Mishnayos count everything; Tehillim counts the current round.
 async function trackTotals() {
-  const rows = await db.many('SELECT track, count(*)::int AS taken, count(learned_at)::int AS learned FROM claims GROUP BY track');
+  const tr = await tehillimRound();
+  const rows = await db.many(`SELECT track, count(*)::int AS taken, count(learned_at)::int AS learned FROM claims
+    WHERE track <> 't' OR round = $1 GROUP BY track`, [tr]);
   const out = {};
   for (const t of Object.values(TRACKS)) {
     const r = rows.find((v) => v.track === t.key) || { taken: 0, learned: 0 };
     out[t.key] = { total: t.total, taken: r.taken, learned: r.learned };
   }
+  out.t.round = tr;
+  out.t.finished = await tehillimFinished();
   return out;
 }
 
 app.get('/board', wrap(async (req, res) => {
-  const rows = await db.many('SELECT track, masechta, count(*)::int AS taken, count(learned_at)::int AS learned FROM claims GROUP BY track, masechta');
+  const tr = await tehillimRound();
+  const rows = await db.many(`SELECT track, masechta, count(*)::int AS taken, count(learned_at)::int AS learned FROM claims
+    WHERE track <> 't' OR round = $1 GROUP BY track, masechta`, [tr]);
   const boards = Object.values(TRACKS).map((t) => {
-    const sedarim = t.sedarim.map((s) => {
+    // Tehillim shows one row per sefer; Shas and Mishnayos one row per seder.
+    const groups = t.key === 't'
+      ? t.sedarim[0].masechtos.map((x) => ({ name: x.name, heb: x.heb, total: x.count, list: [x], range: `${x.first}–${x.last}` }))
+      : t.sedarim.map((s) => ({ name: s.name, heb: s.heb, total: s.total, list: s.masechtos }));
+    const sedarim = groups.map((g) => {
       let taken = 0, learned = 0;
-      for (const x of s.masechtos) {
+      for (const x of g.list) {
         const r = rows.find((v) => v.track === t.key && v.masechta === x.key);
         if (r) { taken += r.taken; learned += r.learned; }
       }
-      return { name: s.name, heb: s.heb, total: s.total, taken, learned };
+      return { name: g.name, heb: g.heb, total: g.total, range: g.range, taken, learned };
     });
     const taken = sedarim.reduce((a, s) => a + s.taken, 0);
     const learned = sedarim.reduce((a, s) => a + s.learned, 0);
@@ -388,9 +420,8 @@ app.get('/board', wrap(async (req, res) => {
   });
   const people = await db.many('SELECT id, name, generation FROM people ORDER BY created_at, id');
   const sums = await summaries();
-  const cdTotals = {};
-  for (const b of boards) cdTotals[b.t.key] = { total: b.total, taken: b.taken, learned: b.learned };
-  res.render('board', { boards, people, sums, countdown: { totals: cdTotals } });
+  const totals = await trackTotals();
+  res.render('board', { boards, people, sums, tRound: tr, tFinished: totals.t.finished, countdown: { totals } });
 }));
 
 // ---------- Admin ----------
